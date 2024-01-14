@@ -1,17 +1,15 @@
 import os
 import random
 import discord
+from dotenv import load_dotenv
 
- 
-GUILD = 'Collectif #Etsi'
-CHANNEL_ID = "1192244304798818369"
-
+load_dotenv()
+TOKEN = os.getenv('DISCORD_TOKEN')
+GUILD = os.getenv('DISCORD_GUILD')
+CHANNEL_ID = os.getenv('DISCORD_CHANNEL_ID')
 intents = discord.Intents.default()
-#intents.guilds = True
 intents.message_content = True
 client = discord.Client(intents=intents)
-
-
 
 @client.event
 async def on_ready():
@@ -31,21 +29,6 @@ async def on_message(message):
     if message.author == client.user:
         return  # Ignore messages from the bot itself
 
-    if message.content.startswith('/role'):
-        # Extracting the role name from the message
-        _, role_name = message.content.split(" ", 1)
-
-        # Finding the role in the guild
-        role = discord.utils.get(message.guild.roles, name=role_name)
-
-        if role:
-            # Adding the role to the author of the message
-            await message.author.add_roles(role)
-            await message.channel.send(f'Role {role_name} added to {message.author.mention}')
-        else:
-            await message.channel.send(f'Role {role_name} not found in the server.')
-
-
     if message.content.startswith('/create_role'):
         # Extracting the role name from the message
         _, role_name = message.content.split(" ", 1)
@@ -53,23 +36,41 @@ async def on_message(message):
         # Creating the role in the guild
         try:
             role_color = discord.Color(random.randint(0, 0xFFFFFF))  # Random color
-            role = await message.guild.create_role(name=role_name, color=role_color)
+            role = await message.guild.create_role(
+                name=role_name,
+                color=role_color,
+                permissions=discord.Permissions(1072705297985)  # Setting permissions
+            )
 
             # Creating a category for the channels
             category = await message.guild.create_category(role_name)
 
             # Creating a private text channel with the same name as the role
-            channel = await category.create_text_channel(role_name)
+            text_channel = await category.create_text_channel(role_name)
 
-            # Setting channel permissions to only allow the role to access it
-            await channel.set_permissions(role, read_messages=True, send_messages=True)
+            # Overwriting permissions for the text channel
+            for existing_role in message.guild.roles:
+                await text_channel.set_permissions(existing_role, read_messages=False, send_messages=False)
+            
+            # Explicitly deny read_messages for the default role
+            await text_channel.set_permissions(message.guild.default_role, read_messages=False)
+            
+            await text_channel.set_permissions(role, read_messages=True, send_messages=True)
 
-            await message.channel.send(f'Role {role_name} and private channel created successfully!')
+            # Creating a private voice channel with the same name as the role
+            voice_channel = await category.create_voice_channel(role_name)
+
+            # Overwriting permissions for the voice channel
+            for existing_role in message.guild.roles:
+                await voice_channel.set_permissions(existing_role, connect=False, speak=False)
+            await voice_channel.set_permissions(role, connect=True, speak=True)
+
+            await message.channel.send(f'Role {role_name}, private text channel, and private voice channel created successfully!')
         except discord.Forbidden:
-            #await message.channel.send('Bot does not have permission to create roles or channels.')
-            pass
+            await message.channel.send('Bot does not have permission to create roles or channels.')
         except discord.HTTPException as e:
             await message.channel.send(f'Error creating role or channel: {e}')
+
 
 
 client.run(TOKEN) # type: ignore
