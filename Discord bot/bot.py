@@ -2,75 +2,57 @@ import os
 import random
 import discord
 from dotenv import load_dotenv
+from discord.ext import commands
+from taskmanager import TaskManager
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 CHANNEL_ID = os.getenv('DISCORD_CHANNEL_ID')
+
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
+bot = commands.Bot(command_prefix='/',intents=intents)  # Set the command prefix
 
-@client.event
+@bot.event
 async def on_ready():
-    guild = discord.utils.get(client.guilds, name=GUILD)
+    guild = discord.utils.get(bot.guilds, name=GUILD)
     if guild:
-        print(f'{client.user} has connected to {guild.name}!')
-        channel = guild.get_channel(int(CHANNEL_ID)) # type: ignore
+        print(f'{bot.user} has connected to {guild.name}!')
+        channel = guild.get_channel(int(CHANNEL_ID))
         if channel:
-            await channel.send('Bonjour!') # type: ignore
+            await channel.send('Hello!')
         else:
             print(f"Channel with ID {CHANNEL_ID} not found.")
     else:
         print(f"Guild with name {GUILD} not found.")
+        
+@bot.command(name='tasks')
+async def display_tasks(ctx):
+    task_manager = TaskManager()
+    tasks = task_manager.get_tasks()
+    task_manager.close_connection()
 
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return  # Ignore messages from the bot itself
+    if tasks:
+        task_list = ""
+        for task in tasks:
+            task_list += f"\n{'✅' if task[4] == 1 else ':clock4:'} **{task[1]}**: {task[2]}. *Members: {task[3]}* \n"
+        await ctx.send(f'__**Tasks Translator Afro Project**__ : {task_list}')
+    else:
+        await ctx.send('No tasks found.')
 
-    if message.content.startswith('/create_role'):
-        # Extracting the role name from the message
-        _, role_name = message.content.split(" ", 1)
-
-        # Creating the role in the guild
-        try:
-            role_color = discord.Color(random.randint(0, 0xFFFFFF))  # Random color
-            role = await message.guild.create_role(
-                name=role_name,
-                color=role_color,
-                permissions=discord.Permissions(1072705297985)  # Setting permissions
-            )
-
-            # Creating a category for the channels
-            category = await message.guild.create_category(role_name)
-
-            # Creating a private text channel with the same name as the role
-            text_channel = await category.create_text_channel(role_name)
-
-            # Overwriting permissions for the text channel
-            for existing_role in message.guild.roles:
-                await text_channel.set_permissions(existing_role, read_messages=False, send_messages=False)
-            
-            # Explicitly deny read_messages for the default role
-            await text_channel.set_permissions(message.guild.default_role, read_messages=False)
-            
-            await text_channel.set_permissions(role, read_messages=True, send_messages=True)
-
-            # Creating a private voice channel with the same name as the role
-            voice_channel = await category.create_voice_channel(role_name)
-
-            # Overwriting permissions for the voice channel
-            for existing_role in message.guild.roles:
-                await voice_channel.set_permissions(existing_role, connect=False, speak=False)
-            await voice_channel.set_permissions(role, connect=True, speak=True)
-
-            await message.channel.send(f'Role {role_name}, private text channel, and private voice channel created successfully!')
-        except discord.Forbidden:
-            await message.channel.send('Bot does not have permission to create roles or channels.')
-        except discord.HTTPException as e:
-            await message.channel.send(f'Error creating role or channel: {e}')
+@bot.command(name='role')
+async def assign_role(ctx, role_name):
+    # Checking if the role exists in the guild
+    member = ctx.message.author
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+    if role:
+        # Assigning the role to the user
+        await bot.add_roles(member, role)
+        await ctx.send(f'The role {role_name} has been assigned to {ctx.author.mention}!')
+    else:
+        await ctx.send(f'The role {role_name} was not found.')
 
 
-
-client.run(TOKEN) # type: ignore
+bot.run(TOKEN)
