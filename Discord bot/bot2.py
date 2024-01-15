@@ -1,7 +1,8 @@
 import os
 from discord.ext import commands
-from dislash import InteractionClient, SelectMenu, SelectOption, MessageInteraction
+from dislash import InteractionClient, ActionRow, Button, ButtonStyle, SelectOption, MessageInteraction
 import discord
+from random import randint
 from dotenv import load_dotenv
 from taskmanager import TaskManager
 
@@ -27,16 +28,19 @@ async def on_ready():
         
         print("Registered roles:")
         for role_name in role_names:
-            print(role_name)
+            #print(role_name)
             role= SelectOption(role_name,role_name)
             role_option.append(role)
     else:
         print(f"Guild with ID {DISCORD_GUILD_ID} not found.")
 
-@inter_client.slash_command(description="Says Hello")
-async def hello(ctx):
-    await ctx.send("Hello!")
+@inter_client.slash_command(name="project_in_progress",description="shows details of current project")
+async def project_in_progress(ctx):
+    with open(r"Discord bot\translator_afro.txt", "r", encoding="utf-8") as file:
+        project_details = file.read()
 
+    await ctx.send(project_details)
+    
 @inter_client.slash_command(name='tasks',description="displays to-do tasks")
 async def display_tasks(ctx):
     task_manager = TaskManager()
@@ -51,33 +55,58 @@ async def display_tasks(ctx):
     else:
         await ctx.send('No tasks found.')
 
-@inter_client.slash_command(name="role",description="choose a role")
+@inter_client.slash_command(name="role",description="adds you to the ongoing project")
 async def role(ctx):
-    global role_option
-    await ctx.send(
-        "Choose a role!",
-        components=[
-            SelectMenu(
-                custom_id="test",
-                placeholder="Choose a role",
-                max_values=1,
-                options=role_option
-            )
-        ]
-    )
-    
-    @bot.event
-    async def on_dropdown(inter: MessageInteraction):
-        labels = [option.label for option in inter.select_menu.selected_options]
-        print(labels)
-        role_name=labels[0]
-        member = ctx.author
-        role = discord.utils.get(ctx.guild.roles, name=role_name)
-        if role:
-            # Assigning the role to the user
-            await member.add_roles(role)
-            await ctx.send(f'The role {role_name} has been assigned to {ctx.author.mention}!')
-        else:
-            await ctx.send(f'The role {role_name} was not found.')
+    member = ctx.author
+    role = discord.utils.get(ctx.guild.roles, name="AAT")
+    if role:
+        # Assigning the role to the user
+        await member.add_roles(role)
+        await ctx.send(f':confetti_ball: The role "AAT" has been assigned to {ctx.author.mention}!:confetti_ball:')
+    else:
+        await ctx.send(f'The role "AAT" was not found.')
 
+@inter_client.slash_command(description="be added to a task in the current project")
+async def be_add_to_a_task(ctx):
+    task_manager = TaskManager()
+    tasks = task_manager.get_tasks()
+    task_manager.close_connection()
+    rows=[]
+    buttons=[]
+    # Split the tasks into chunks of 5
+    chunk_size = 5
+    task_chunks = [tasks[i:i + chunk_size] for i in range(0, len(tasks), chunk_size)]
+
+    # Create buttons for each task
+    buttons = [
+        [
+            Button(
+                style=randint(1, 4),
+                label=task[1],
+                custom_id=str(task[0])
+            )
+            for task in task_chunk
+        ]
+        for task_chunk in task_chunks
+    ]
+
+    # Create ActionRows from buttons
+    rows = [ActionRow(*button_chunk) for button_chunk in buttons]
+        
+        
+    msg = await ctx.send("Choose a task you want to work on!", components=rows)
+
+    # Here timeout=60 means that the listener will
+    # finish working after 60 seconds of inactivity
+    on_click = msg.create_click_listener(timeout=20)
+    
+    @on_click.matching_id("0")
+    async def on_test_button(inter):
+        await inter.reply("You've clicked the button!")
+
+    # @on_click.timeout
+    # async def on_timeout():
+    #     await msg.delete()
+    
+    
 bot.run(TOKEN)
