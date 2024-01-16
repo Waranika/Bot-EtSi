@@ -76,12 +76,13 @@ async def be_add_to_a_task(ctx):
     # Split the tasks into chunks of 5
     chunk_size = 5
     task_chunks = [tasks[i:i + chunk_size] for i in range(0, len(tasks), chunk_size)]
+    color=[ButtonStyle.green,ButtonStyle.blurple]
 
     # Create buttons for each task
     buttons = [
         [
             Button(
-                style=randint(1, 4),
+                style=color[randint(0,1)],
                 label=task[1],
                 custom_id=str(task[0])
             )
@@ -96,17 +97,53 @@ async def be_add_to_a_task(ctx):
         
     msg = await ctx.send("Choose a task you want to work on!", components=rows)
 
-    # Here timeout=60 means that the listener will
-    # finish working after 60 seconds of inactivity
-    on_click = msg.create_click_listener(timeout=20)
+    # Here timeout=20 means that the listener will
+    # finish working after 20 seconds of inactivity
+    on_click = msg.create_click_listener(timeout=20) # doesn't work
     
     @on_click.matching_id("0")
-    async def on_test_button(inter):
-        await inter.reply("You've clicked the button!")
+    async def on_test_button_0(inter):
+        await handle_task_selection(inter, "Selecting a Pre-trained Model", "Selecting a Pre-trained Model")
 
-    # @on_click.timeout
-    # async def on_timeout():
-    #     await msg.delete()
-    
-    
+    @on_click.matching_id("1")
+    async def on_test_button_1(inter):
+        await handle_task_selection(inter, "Data Preparation", "Data Preparation")
+
+    @on_click.matching_id("2")
+    async def on_test_button_2(inter):
+        await handle_task_selection(inter, "Fine-tuning", "Fine-tuning")
+
+    @on_click.matching_id("3")
+    async def on_test_button_3(inter):
+        await handle_task_selection(inter, "Hyperparameter Tuning", "Hyperparameter Tuning")
+
+    @on_click.matching_id("4")
+    async def on_test_button_4(inter):
+        await handle_task_selection(inter, "Evaluation", "Evaluation")
+
+    @on_click.matching_id("5")
+    async def on_test_button_5(inter):
+        await handle_task_selection(inter, "Website (frontEnd)", "Website (frontEnd)")
+
+    @on_click.matching_id("6")
+    async def on_test_button_6(inter):
+        await handle_task_selection(inter, "Website (BackEnd)", "Website (BackEnd)")
+
+    async def handle_task_selection(inter, task_name, task_display_name):
+        member = ctx.author
+        pseudo = member.nick
+        task_manager = TaskManager()
+        
+        check = task_manager.check_member(task=task_display_name, member=pseudo)
+        print(f"the result was {check} for the user {pseudo}")
+        if check:
+            task_manager.be_member(task=task_display_name, member=pseudo)
+            await inter.reply(f":loudspeaker: You've chosen the task **{task_name}**!")
+            await msg.delete()
+            task_manager.close_connection()
+        else:
+            await inter.reply(f":loudspeaker: You're already a member of the task **{task_name}**!")
+            await msg.delete()
+            task_manager.close_connection()
+
 bot.run(TOKEN)

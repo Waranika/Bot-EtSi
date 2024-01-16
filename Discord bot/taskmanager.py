@@ -12,23 +12,43 @@ class TaskManager:
             VALUES (?, ?, ?, ?)
         ''', (name, description, members, status))
         self.connection.commit()
+    
+    def check_member(self, task, member):
+        try:
+            self.cursor.execute('''
+                SELECT members FROM tasks
+                WHERE name = ?
+            ''', (task,))
+            result = self.cursor.fetchone()
+            print(f"result: {result}")
+
+            if result:
+                existing_members = result[0].split(',')
+                
+                if member in existing_members:
+                    return False  # Member is already associated with the task
+
+            return True  # Member is not associated with the task
+        
+        except Exception as e:
+            print(e)
 
     def get_tasks(self):
         self.cursor.execute('SELECT * FROM tasks')
         tasks = self.cursor.fetchall()
         return tasks
     
-    def be_member(self, tasks:list, member:str):
+    def be_member(self, task:str, member:str):
         # Assuming 'tasks' table has columns 'name' and 'members'
-        for task in tasks:
-            self.cursor.execute(f'''
+
+        self.cursor.execute('''
                 UPDATE tasks
-                SET members = COALESCE(members || ',', '') || ?
+                SET members = ? || COALESCE(members, '')
                 WHERE name = ?
-            ''', (member, task))
+            ''', (member + ',', task))
 
         self.connection.commit()
-        print(f"Member '{member}' added to the tasks {tasks} successfully!")
+        print(f"Member '{member}' added to the tasks {task} successfully!")
 
 
     def close_connection(self):
@@ -38,11 +58,7 @@ class TaskManager:
 # Example usage
 if __name__ == "__main__":
     manager = TaskManager()
-
-    # Assuming you have a task called 'example_task' and a list of members
-    task_name = 'Evaluation'
-    # Assuming you have a list of tasks and a single member
-    tasks_list = ['task1', 'task2', 'task3']
-    member = 'toto'
-
-    manager.be_member(tasks_list, member)
+    test = manager.check_member("Website (BackEnd)","theotime")
+    print(test)
+    if test:
+        manager.be_member(task="Website (BackEnd)",member="theotime")
