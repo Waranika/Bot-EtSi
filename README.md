@@ -23,7 +23,8 @@ Table of Contents
 Authors
 -------
 
-*   \[Author Name\] - Initial work and development of the Etsi Community Discord Bot. For contributions and inquiries, please contact \[contact information\].
+*   Waranika - Initial work and development of the Etsi Community Discord Bot. For contributions and inquiries, please contact (https://github.com/Waranika).
+*   Theotime01 - Further development and implementation of many of the late features (https://github.com/TheoTime01)
 
 Context
 -------
@@ -81,5 +82,5 @@ Acknowledgments
 Special thanks to:
 
 *   The Etsi Community server moderators for their insights and support in defining the bot's requirements.
-*   \[Contributors' Names\] for their valuable contributions to the bot's development and testing.
-*   All Etsi Community members for their enthusiasm and active participation, making this project a reality.
+*   TheoTime 01 for their valuable contributions to the bot's development and testing.
+
